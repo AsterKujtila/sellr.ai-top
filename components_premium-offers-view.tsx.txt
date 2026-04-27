@@ -1,0 +1,252 @@
+'use client';
+
+import { useState } from 'react';
+import { ArrowLeft, Copy, Check, Sparkles, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import ThinkingDots from './thinking-dots';
+import Markdown from './markdown';
+
+type OfferStyle = 'bold' | 'soft' | 'urgency' | 'story';
+
+const STYLES = [
+  { id: 'bold' as OfferStyle, icon: '💪', label: 'Bold' },
+  { id: 'soft' as OfferStyle, icon: '🌸', label: 'Soft' },
+  { id: 'urgency' as OfferStyle, icon: '🔥', label: 'Urgency' },
+  { id: 'story' as OfferStyle, icon: '📖', label: 'Story' },
+];
+
+export default function PremiumOffersView() {
+  const [step, setStep] = useState<'form' | 'result'>('form');
+  const [formData, setFormData] = useState({
+    product: '',
+    audience: '',
+    outcome: '',
+    price: '',
+  });
+  const [style, setStyle] = useState<OfferStyle>('bold');
+  const [result, setResult] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = async () => {
+    if (!formData.product.trim()) {
+      setError('Product name is required');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, style }),
+      });
+
+      if (response.status === 429) {
+        setError('Out of credits. Upgrade your plan to continue.');
+        return;
+      }
+
+      const { text } = await response.json();
+      setResult(text);
+      setStep('result');
+    } catch (err) {
+      setError('Failed to generate offer. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gradient-dark overflow-hidden">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-6 border-b border-border flex items-center justify-between">
+        {step === 'result' && (
+          <button
+            onClick={() => setStep('form')}
+            className="btn-icon hover:bg-primary/10"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+        <h2 className="font-serif text-2xl font-bold text-gradient flex items-center gap-2 flex-1">
+          <Sparkles className="w-6 h-6 text-primary" />
+          Generate Offer Copy
+        </h2>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-6 pb-24">
+        {step === 'form' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto space-y-6"
+          >
+            {/* Input Fields */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  What are you selling? *
+                </label>
+                <input
+                  type="text"
+                  value={formData.product}
+                  onChange={(e) => setFormData({ ...formData, product: e.target.value })}
+                  placeholder="E.g., Premium Notion Template, YouTube Course, Coaching..."
+                  className="premium-input"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Who is your target audience?
+                </label>
+                <textarea
+                  value={formData.audience}
+                  onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
+                  placeholder="E.g., Busy entrepreneurs, college students, freelancers..."
+                  rows={3}
+                  className="premium-textarea"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
+                    Desired Outcome
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.outcome}
+                    onChange={(e) => setFormData({ ...formData, outcome: e.target.value })}
+                    placeholder="E.g., Make a purchase, Join waitlist..."
+                    className="premium-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
+                    Price Point
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    placeholder="$99, $9.99/mo, Free..."
+                    className="premium-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Style Selector */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-3 block">
+                Offer Style
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {STYLES.map(({ id, icon, label }) => (
+                  <motion.button
+                    key={id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setStyle(id)}
+                    className={`py-3 rounded-lg font-medium transition-all text-sm ${
+                      style === id
+                        ? 'bg-gradient-to-br from-primary to-secondary text-white ring-2 ring-primary'
+                        : 'glass-panel hover:glass-panel-strong'
+                    }`}
+                  >
+                    <div className="text-lg mb-1">{icon}</div>
+                    {label}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="glass-panel rounded-xl p-4 border-l-4 border-destructive"
+              >
+                <p className="text-sm text-destructive font-medium">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Generate Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleGenerate}
+              disabled={isLoading || !formData.product.trim()}
+              className="w-full btn-primary rounded-lg py-4 flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5" />
+                  Generate Offer Copy — 2 credits
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto space-y-4"
+          >
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <ThinkingDots />
+                <p className="text-muted-foreground text-sm italic">Crafting your perfect offer...</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">Your Generated Copy</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleCopy}
+                    className="btn-icon"
+                  >
+                    {copied ? (
+                      <Check className="w-5 h-5 text-success" />
+                    ) : (
+                      <Copy className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </motion.button>
+                </div>
+
+                <div className="card rounded-2xl prose-premium">
+                  <Markdown content={result} />
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+}

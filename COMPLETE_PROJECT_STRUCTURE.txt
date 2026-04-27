@@ -1,0 +1,434 @@
+
+═══════════════════════════════════════════════════════════════════════════════════
+SELLR.AI — PREMIUM PRODUCTION APP ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════════
+
+PROJECT FOLDER STRUCTURE
+═══════════════════════════════════════════════════════════════════════════════════
+
+sellr-ai/
+│
+├── 📄 ROOT FILES
+│   ├── .env.example                 # Environment variables template
+│   ├── .gitignore                   # Git ignore rules
+│   ├── .eslintrc.json               # ESLint config (strict)
+│   ├── package.json                 # Dependencies (exact versions)
+│   ├── tsconfig.json                # TypeScript strict mode
+│   ├── next.config.js               # Next.js 14 config
+│   ├── tailwind.config.ts           # Tailwind 3.4 theme
+│   ├── postcss.config.js            # PostCSS pipeline
+│   ├── vercel.json                  # Vercel deployment config
+│   ├── README.md                    # Setup & deployment guide
+│   └── middleware.ts                # Auth middleware
+│
+├── 📂 APP DIRECTORY (Next.js 14 App Router)
+│   │
+│   ├── layout.tsx                   # Root layout with fonts & metadata
+│   ├── globals.css                  # ⭐ PREMIUM DESIGN SYSTEM
+│   ├── page.tsx                     # Redirect logic
+│   │
+│   ├── 🔐 AUTH
+│   │   ├── login/
+│   │   │   └── page.tsx             # Premium login screen with animations
+│   │   ├── auth/
+│   │   │   └── callback/
+│   │   │       └── route.ts         # Google OAuth callback handler
+│   │   └── logout/
+│   │       └── route.ts             # Logout handler
+│   │
+│   ├── 🛡️ PROTECTED ROUTES (main)
+│   │   ├── layout.tsx               # Shell provider + Auth guard
+│   │   ├── shell-context.tsx        # Global shell state (Zustand alternative)
+│   │   │
+│   │   ├── chat/
+│   │   │   └── page.tsx             # Routes to chat view
+│   │   ├── offers/
+│   │   │   └── page.tsx             # Routes to offers view
+│   │   ├── store/
+│   │   │   └── page.tsx             # Routes to store view
+│   │   ├── credits/
+│   │   │   └── page.tsx             # Routes to credits view
+│   │   ├── history/
+│   │   │   └── page.tsx             # Routes to history view
+│   │   └── onboarding/
+│   │       └── page.tsx             # Onboarding flow
+│   │
+│   └── 🔌 API ROUTES (Backend)
+│       ├── auth/google/route.ts     # Google OAuth redirect
+│       ├── chat/
+│       │   ├── route.ts             # 💬 Chat with Claude (1 credit)
+│       │   └── history/route.ts     # Fetch session history
+│       ├── offers/route.ts          # ✍️ Generate offer copy (2 credits)
+│       ├── store/route.ts           # 🏪 Analyze store (3 credits)
+│       ├── sessions/
+│       │   └── route.ts             # CRUD for chat sessions
+│       ├── feedback/route.ts        # Submit feedback
+│       └── account/delete/route.ts  # Delete account + cascade
+│
+├── 🎨 COMPONENTS DIRECTORY
+│   │
+│   ├── ⭐ SHELL COMPONENTS
+│   │   ├── desktop-shell.tsx        # Phone frame wrapper (desktop)
+│   │   ├── auth-guard.tsx           # Auth check wrapper
+│   │   ├── premium-bottom-navigation.tsx  # Navigation pills
+│   │   └── premium-settings-menu.tsx     # Settings sheet with sub-panels
+│   │
+│   ├── 💬 MAIN VIEWS (Premium)
+│   │   ├── premium-chat-view.tsx    # ⭐ AI chat with animations
+│   │   ├── premium-offers-view.tsx  # Offer generator
+│   │   ├── premium-store-view.tsx   # Store analyzer
+│   │   ├── premium-credits-dashboard.tsx  # Credits & pricing
+│   │   ├── premium-history-view.tsx      # Session history
+│   │   └── premium-onboarding-view.tsx   # Onboarding flow
+│   │
+│   ├── 🎭 UTILITY COMPONENTS
+│   │   ├── premium-thinking-dots.tsx     # Loading indicator
+│   │   ├── markdown.tsx             # Markdown renderer
+│   │   ├── page-header.tsx          # Standard header
+│   │   ├── user-header.tsx          # User profile card
+│   │   ├── error-boundary.tsx       # Error handling
+│   │   └── loading-skeleton.tsx     # Skeleton screens
+│   │
+│   ├── 🧩 UI PRIMITIVES (Radix UI based)
+│   │   ├── ui/
+│   │   │   ├── button.tsx           # Button variants
+│   │   │   ├── input.tsx            # Text input
+│   │   │   ├── textarea.tsx         # Textarea
+│   │   │   ├── label.tsx            # Form label
+│   │   │   ├── dialog.tsx           # Modal dialog
+│   │   │   ├── drawer.tsx           # Bottom sheet (Vaul)
+│   │   │   ├── radio-group.tsx      # Radio buttons
+│   │   │   ├── avatar.tsx           # User avatar
+│   │   │   ├── badge.tsx            # Badge component
+│   │   │   ├── progress.tsx         # Progress bar
+│   │   │   ├── tabs.tsx             # Tab component
+│   │   │   ├── tooltip.tsx          # Tooltips
+│   │   │   ├── toast.tsx            # Toast notifications
+│   │   │   └── skeleton.tsx         # Loading skeleton
+│   │
+│   └── 📦 LAYOUT COMPONENTS
+│       ├── modal-container.tsx
+│       ├── sidebar.tsx
+│       └── responsive-wrapper.tsx
+│
+├── 📚 LIB DIRECTORY
+│   │
+│   ├── 🔑 Supabase
+│   │   ├── client.ts                # Browser client
+│   │   ├── server.ts                # Server client
+│   │   └── middleware.ts            # Auth middleware
+│   │
+│   ├── 📋 Type Definitions
+│   │   ├── types.ts                 # All interfaces
+│   │   ├── constants.ts             # Constants & prompts
+│   │   └── api.ts                   # API response types
+│   │
+│   ├── 🛠️ Utilities
+│   │   ├── utils.ts                 # Helper functions
+│   │   ├── formatters.ts            # Date/text formatting
+│   │   ├── validators.ts            # Input validation
+│   │   └── hooks.ts                 # Custom React hooks
+│   │
+│   └── 🤖 AI & Services
+│       ├── ai-service.ts            # Anthropic wrapper
+│       ├── storage-service.ts       # Supabase queries
+│       └── auth-service.ts          # Auth helpers
+│
+├── 🗄️ SUPABASE DIRECTORY
+│   │
+│   ├── migrations/
+│   │   └── 001_schema.sql           # ⭐ Complete DB schema
+│   │
+│   ├── seed.sql                     # Optional seed data
+│   └── functions/
+│       ├── auto_profile.sql         # Auto-create profile trigger
+│       └── updated_at_trigger.sql   # Updated_at auto-update
+│
+├── 📦 PUBLIC DIRECTORY
+│   ├── fonts/
+│   │   ├── figtree-variable.woff2
+│   │   └── fraunces-variable.woff2
+│   ├── favicon.ico
+│   └── images/
+│       └── og-image.png
+│
+└── 📄 DOCUMENTATION
+    ├── SETUP.md                     # Installation guide
+    ├── API_DOCS.md                  # API endpoint docs
+    ├── DESIGN_SYSTEM.md             # Design tokens
+    ├── DEPLOYMENT.md                # Vercel deployment
+    └── TROUBLESHOOTING.md           # Common issues
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+KEY FILES EXPLAINED
+═══════════════════════════════════════════════════════════════════════════════════
+
+⭐ CRITICAL PRODUCTION FILES:
+
+1. app/globals.css
+   - Premium 2026 design system
+   - Dark glassmorphic theme
+   - All CSS variables
+   - Animation keyframes
+   - Prose styles for AI responses
+
+2. components/premium-chat-view.tsx
+   - Full AI chat interface
+   - Voice input with mic button
+   - Message history with scroll
+   - Copy & TTS for responses
+   - Real-time credit counter
+   - Empty state with quick chips
+   - Error handling & loading states
+
+3. app/api/chat/route.ts
+   - Claude Opus 4.5 integration
+   - Credit system enforcement
+   - Message persistence
+   - Session management
+   - Error handling with proper HTTP codes
+
+4. supabase/migrations/001_schema.sql
+   - Profiles table with auth trigger
+   - Chat sessions & messages
+   - Feedback collection
+   - Row-level security (RLS) policies
+   - Proper indexes for performance
+
+5. middleware.ts
+   - Route protection
+   - Session validation
+   - Redirect logic
+   - CORS handling
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+DATABASE SCHEMA (PostgreSQL via Supabase)
+═══════════════════════════════════════════════════════════════════════════════════
+
+TABLES:
+
+1. profiles (UUID primary key)
+   ├── id (FK auth.users)
+   ├── name
+   ├── email
+   ├── avatar_url
+   ├── whop_store_url
+   ├── plan (free/starter/pro/scale)
+   ├── credits_used
+   ├── credits_limit
+   ├── onboarding_completed
+   ├── created_at
+   └── updated_at
+
+2. chat_sessions (UUID primary key)
+   ├── id
+   ├── user_id (FK profiles)
+   ├── title
+   ├── session_date
+   ├── day_of_week
+   ├── summary
+   ├── created_at
+   └── updated_at (auto-update trigger)
+
+3. messages (UUID primary key)
+   ├── id
+   ├── session_id (FK chat_sessions)
+   ├── user_id (FK profiles)
+   ├── role (user/assistant)
+   ├── content
+   └── created_at
+
+4. feedback (UUID primary key)
+   ├── id
+   ├── user_id (FK profiles)
+   ├── reason (bug/suggestion/other)
+   ├── message
+   └── created_at
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+API ENDPOINTS (All require auth)
+═══════════════════════════════════════════════════════════════════════════════════
+
+POST /api/chat
+  → Request: { messages: [{role, content}][], sessionId: string }
+  → Response: { text: string }
+  → Cost: 1 credit
+  → Error: 429 if out of credits
+
+POST /api/offers
+  → Request: { product, audience, outcome?, price?, style }
+  → Response: { text: string }
+  → Cost: 2 credits
+
+POST /api/store
+  → Request: { url?, description }
+  → Response: { text: string }
+  → Cost: 3 credits
+
+GET /api/chat/history?sessionId=xxx
+  → Response: { messages: Message[] }
+
+GET/POST/PATCH/DELETE /api/sessions
+  → Full CRUD for chat sessions
+
+POST /api/feedback
+  → Request: { reason, message }
+
+DELETE /api/account/delete
+  → Cascading delete of profile + all related data
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+ENVIRONMENT VARIABLES
+═══════════════════════════════════════════════════════════════════════════════════
+
+Required:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- ANTHROPIC_API_KEY
+
+Optional:
+- VERCEL_ENV (auto-set)
+- NODE_ENV
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════════
+
+✅ Pre-deployment:
+  □ Run: npm run type-check (all files must pass)
+  □ Run: npm run build (no errors)
+  □ Test auth flow on localhost
+  □ Test API endpoints
+  □ Test credit deduction
+  □ Verify RLS policies in Supabase
+
+✅ Supabase:
+  □ Create project
+  □ Run migrations
+  □ Enable Google OAuth (PKCE)
+  □ Set redirect URL to production domain
+  □ Test profile auto-creation
+  □ Verify RLS policies
+
+✅ Vercel:
+  □ Connect GitHub repo
+  □ Set environment variables
+  □ Enable "Build Command": npm run build
+  □ Deploy main branch
+  □ Test production endpoints
+  □ Monitor error logs
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+FEATURES IMPLEMENTED
+═══════════════════════════════════════════════════════════════════════════════════
+
+✅ Authentication
+   - Google OAuth with PKCE
+   - Auto profile creation
+   - Session persistence
+   - Logout with cascade delete
+
+✅ Chat System
+   - Real-time AI responses (Claude Opus 4.5)
+   - Full message history
+   - Session management
+   - Voice input (SpeechRecognition API)
+   - Text-to-speech (SpeechSynthesis API)
+   - Copy-to-clipboard
+   - Markdown rendering
+
+✅ Premium Tools
+   - Offer copy generator (2 credits)
+   - Store analyzer (3 credits)
+   - Both with real Claude AI
+
+✅ Credit System
+   - Free tier: 50 credits
+   - Starter: 200/month
+   - Pro: 600/month (best value)
+   - Scale: 1500/month
+   - Automatic deduction per request
+   - 429 error when exhausted
+
+✅ UI/UX (Premium 2026 Design)
+   - Dark glassmorphic theme
+   - Smooth animations (Framer Motion)
+   - Mobile-first (430px phone frame)
+   - Responsive on all screens
+   - Empty states with guidance
+   - Loading skeletons
+   - Error boundaries
+   - Toast notifications
+
+✅ Data Persistence
+   - Full conversation history
+   - Week-grouped session view
+   - Search functionality
+   - Delete with confirmation
+   - Auto-summary generation
+
+✅ Settings & Account
+   - Profile management
+   - Account deletion
+   - Feedback submission
+   - Plan information
+   - Share functionality
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+PERFORMANCE OPTIMIZATIONS
+═══════════════════════════════════════════════════════════════════════════════════
+
+✅ Frontend:
+   - Server components for initial render
+   - Client components only where needed
+   - Image optimization (Next.js Image)
+   - Code splitting by route
+   - Lazy loading of heavy components
+   - Debounced search input
+
+✅ Backend:
+   - API route caching where applicable
+   - Database indexes on frequent queries
+   - RLS policies for data isolation
+   - Rate limiting via credit system
+
+✅ Network:
+   - Compression (gzip)
+   - CSS minification
+   - JavaScript minification
+   - Vercel edge functions
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+SECURITY MEASURES
+═══════════════════════════════════════════════════════════════════════════════════
+
+✅ Authentication:
+   - Google OAuth with PKCE
+   - Secure session management
+   - No passwords stored
+
+✅ Authorization:
+   - Row-level security on all tables
+   - API auth check on every endpoint
+   - Credit check before operations
+
+✅ Data Protection:
+   - HTTPS only on production
+   - No sensitive data in logs
+   - Proper error messages (no stack traces)
+   - Input validation on all forms
+
+✅ Privacy:
+   - Full account deletion with cascade
+   - No tracking/analytics by default
+   - GDPR-compliant
+
+═══════════════════════════════════════════════════════════════════════════════════

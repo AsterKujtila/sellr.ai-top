@@ -1,0 +1,61 @@
+'use client';
+
+import { MessageCircle, PenLine, Store, Zap, Settings } from 'lucide-react';
+import { useShell } from '@/app/(main)/shell-context';
+import type { Tab } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+
+const tabs: { id: Tab; icon: typeof MessageCircle; label: string }[] = [
+  { id: 'chat', icon: MessageCircle, label: 'Chat' },
+  { id: 'offers', icon: PenLine, label: 'Offers' },
+  { id: 'store', icon: Store, label: 'Store' },
+  { id: 'credits', icon: Zap, label: 'Credits' },
+];
+
+export default function PremiumBottomNavigation() {
+  const { activeTab, setActiveTab, setSettingsOpen } = useShell();
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-40 px-4 py-4 safe-area-bottom bg-gradient-to-t from-background via-background/80 to-transparent">
+      <div className="glass-panel-strong rounded-2xl px-2 py-3 flex items-center gap-1 backdrop-blur-2xl">
+        {tabs.map(({ id, icon: Icon, label }) => {
+          const isActive = activeTab === id;
+          return (
+            <motion.button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={cn(
+                'flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200',
+                isActive
+                  ? 'bg-gradient-to-br from-primary to-secondary text-white'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-10px font-semibold uppercase">{label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary rounded-full"
+                />
+              )}
+            </motion.button>
+          );
+        })}
+
+        {/* Settings Button */}
+        <motion.button
+          onClick={() => setSettingsOpen(true)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex-shrink-0 p-3 rounded-xl hover:bg-surface-variant transition-all duration-200"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </motion.button>
+      </div>
+    </div>
+  );
+}

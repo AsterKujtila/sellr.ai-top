@@ -1,0 +1,313 @@
+'use client';
+
+import { useRef, useEffect, useState, useCallback } from 'react';
+import {
+  SettingsIcon, LogOut, AlertCircle, MessageSquare, Share2, ArrowLeft,
+  Moon, Trash2, Mail
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useShell } from '@/app/(main)/shell-context';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+type SubPanel = 'main' | 'preferences' | 'account' | 'about' | 'feedback' | 'share';
+
+export function SettingsMenu() {
+  const { settingsOpen, setSettingsOpen } = useShell();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [currentPanel, setCurrentPanel] = useState<SubPanel>('main');
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragY, setDragY] = useState(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Load profile
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    const loadProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [settingsOpen, supabase]);
+
+  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setDragStartY(clientY);
+  }, []);
+
+  const handleDragMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const delta = Math.max(0, clientY - dragStartY);
+    setDragY(delta);
+  }, [dragStartY]);
+
+  const handleDragEnd = useCallback(() => {
+    if (dragY > 100) {
+      setSettingsOpen(false);
+    }
+    setDragY(0);
+  }, [dragY, setSettingsOpen]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setSettingsOpen(false);
+    router.push('/login');
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Are you sure? This will permanently delete your account and all data.'
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch('/api/account/delete', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await supabase.auth.signOut();
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
+  };
+
+  if (!settingsOpen) return null;
+
+  const baseClasses = 'fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity';
+  const sheetClasses = `fixed bottom-0 left-0 right-0 bg-[#1a1210] rounded-t-3xl z-50 max-h-[90vh] overflow-y-auto transition-transform`;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={baseClasses}
+        onClick={() => setSettingsOpen(false)}
+        style={{
+          opacity: dragY > 0 ? Math.max(0, 1 - dragY / 100) : 1,
+        }}
+      />
+
+      {/* Sheet */}
+      <div
+        ref={sheetRef}
+        className={sheetClasses}
+        onTouchStart={handleDragStart}
+        onTouchMove={handleDragMove}
+        onTouchEnd={handleDragEnd}
+        onMouseDown={handleDragStart}
+        onMouseMove={settingsOpen ? handleDragMove : undefined}
+        onMouseUp={handleDragEnd}
+        style={{
+          transform: `translateY(${dragY}px)`,
+        }}
+      >
+        {/* Drag Handle */}
+        <div className="flex justify-center pt-4 pb-6">
+          <div className="w-10 h-1 rounded-full bg-[rgba(255,255,255,0.2)]" />
+        </div>
+
+        {/* Main Panel */}
+        {currentPanel === 'main' && (
+          <div className="px-4 pb-32 space-y-4">
+            {/* User Card */}
+            {profile && (
+              <div className="glass p-4 rounded-2xl flex items-center gap-3">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={profile.avatar_url} />
+                  <AvatarFallback>{profile.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-mono text-sm font-semibold text-[#f5f0eb] truncate">
+                    {profile.name}
+                  </p>
+                  <Badge className="mt-1 bg-[#c4724a] text-white capitalize">
+                    {profile.plan}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Menu Items */}
+            <div className="space-y-3">
+              {[
+                { label: 'Preferences', icon: Moon, onClick: () => setCurrentPanel('preferences') },
+                { label: 'Account', icon: AlertCircle, onClick: () => setCurrentPanel('account') },
+                { label: 'About', icon: MessageSquare, onClick: () => setCurrentPanel('about') },
+                { label: 'Feedback', icon: Mail, onClick: () => setCurrentPanel('feedback') },
+                { label: 'Share SELLR', icon: Share2, onClick: () => setCurrentPanel('share') },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.onClick}
+                  className="glass w-full p-4 rounded-xl flex items-center justify-between hover:bg-[rgba(255,255,255,0.10)] transition-all"
+                >
+                  <span className="flex items-center gap-3 text-[#f5f0eb] font-medium">
+                    <item.icon className="w-5 h-5" />
+                    {item.label}
+                  </span>
+                  <span className="text-[#a89890]">→</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Danger Zone */}
+            <div className="pt-4 border-t border-[rgba(255,255,255,0.09)]">
+              <button
+                onClick={handleSignOut}
+                className="glass-strong w-full p-4 rounded-xl flex items-center justify-between hover:bg-[#c44040]/20 transition-all text-[#c44040]"
+              >
+                <span className="flex items-center gap-3 font-medium">
+                  <LogOut className="w-5 h-5" />
+                  Sign Out
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Account Panel */}
+        {currentPanel === 'account' && (
+          <div className="px-4 pb-32 space-y-6">
+            {/* Back Button */}
+            <button
+              onClick={() => setCurrentPanel('main')}
+              className="flex items-center gap-2 text-[#a89890] hover:text-[#f5f0eb] transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+
+            <h3 className="font-serif text-lg font-semibold text-[#f5f0eb]">
+              Manage Account
+            </h3>
+
+            {/* Name */}
+            <div>
+              <Label className="text-[#a89890]">Name</Label>
+              <Input
+                defaultValue={profile?.name}
+                className="mt-2"
+                placeholder="Your name"
+              />
+            </div>
+
+            {/* Whop Store URL */}
+            <div>
+              <Label className="text-[#a89890]">Whop Store URL</Label>
+              <Input
+                defaultValue={profile?.whop_store_url}
+                className="mt-2"
+                placeholder="https://whop.com/your-store"
+              />
+            </div>
+
+            <Button className="w-full bg-[#c4724a] hover:bg-[#d4825a]">
+              Save Changes
+            </Button>
+
+            {/* Delete Account */}
+            <div className="pt-4 border-t border-[rgba(255,255,255,0.09)]">
+              <p className="text-sm text-[#a89890] mb-4">
+                Delete your account and all associated data.
+              </p>
+              <Button
+                onClick={handleDeleteAccount}
+                variant="destructive"
+                className="w-full"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Account
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Panel */}
+        {currentPanel === 'feedback' && (
+          <div className="px-4 pb-32 space-y-4">
+            <button
+              onClick={() => setCurrentPanel('main')}
+              className="flex items-center gap-2 text-[#a89890] hover:text-[#f5f0eb]"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <h3 className="font-serif text-lg font-semibold text-[#f5f0eb]">
+              Send Feedback
+            </h3>
+
+            <RadioGroup>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="bug" id="bug" />
+                <Label htmlFor="bug">Bug</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="suggestion" id="suggestion" />
+                <Label htmlFor="suggestion">Suggestion</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="other" id="other" />
+                <Label htmlFor="other">Other</Label>
+              </div>
+            </RadioGroup>
+
+            <Textarea placeholder="Your feedback..." />
+            <Button className="w-full bg-[#c4724a]">Send Feedback</Button>
+          </div>
+        )}
+
+        {/* About Panel */}
+        {currentPanel === 'about' && (
+          <div className="px-4 pb-32 space-y-4">
+            <button
+              onClick={() => setCurrentPanel('main')}
+              className="flex items-center gap-2 text-[#a89890]"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <h3 className="font-serif text-lg font-semibold text-[#f5f0eb]">
+              About SELLR
+            </h3>
+
+            <div className="glass p-4 rounded-xl space-y-3 text-sm text-[#a89890]">
+              <p>SELLR is an AI sales coach built exclusively for Whop sellers.</p>
+              <p>Powered by Claude Opus 4.5 and built with ❤️</p>
+              <p className="text-xs">v1.0.0</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,191 @@
+'use client';
+
+import { useState } from 'react';
+import { ArrowLeft, Copy, Check, Sparkles, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import ThinkingDots from './thinking-dots';
+import Markdown from './markdown';
+
+export default function PremiumStoreView() {
+  const [step, setStep] = useState<'form' | 'result'>('form');
+  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [result, setResult] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleAnalyze = async () => {
+    if (!description.trim()) {
+      setError('Store description is required');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url || undefined, description }),
+      });
+
+      if (response.status === 429) {
+        setError('Out of credits. Upgrade your plan to continue.');
+        return;
+      }
+
+      const { text } = await response.json();
+      setResult(text);
+      setStep('result');
+    } catch (err) {
+      setError('Failed to analyze store. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gradient-dark overflow-hidden">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-6 border-b border-border flex items-center justify-between">
+        {step === 'result' && (
+          <button
+            onClick={() => setStep('form')}
+            className="btn-icon hover:bg-primary/10"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+        <h2 className="font-serif text-2xl font-bold text-gradient flex items-center gap-2 flex-1">
+          <Sparkles className="w-6 h-6 text-secondary" />
+          Store Analyzer
+        </h2>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-6 pb-24">
+        {step === 'form' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto space-y-6"
+          >
+            {/* Input Fields */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block">
+                  Your Store URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://whop.com/your-store"
+                  className="premium-input"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-foreground mb-2 block flex justify-between">
+                  <span>Store Description *</span>
+                  <span className="text-xs text-muted-foreground">
+                    {description.length}/500
+                  </span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+                  placeholder="Tell me about your Whop store... What do you sell? Who are your customers? What problems do you solve?"
+                  rows={6}
+                  className="premium-textarea"
+                />
+                <p className="text-10px text-muted-foreground mt-2">
+                  The more details, the better diagnosis!
+                </p>
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="glass-panel rounded-xl p-4 border-l-4 border-destructive"
+              >
+                <p className="text-sm text-destructive font-medium">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Analyze Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleAnalyze}
+              disabled={isLoading || !description.trim()}
+              className="w-full btn-primary rounded-lg py-4 flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5" />
+                  Analyze Store — 3 credits
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto space-y-4"
+          >
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <ThinkingDots />
+                <p className="text-muted-foreground text-sm italic">Deep diving into your store...</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">Store Analysis</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleCopy}
+                    className="btn-icon"
+                  >
+                    {copied ? (
+                      <Check className="w-5 h-5 text-success" />
+                    ) : (
+                      <Copy className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </motion.button>
+                </div>
+
+                <div className="card rounded-2xl prose-premium">
+                  <Markdown content={result} />
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,47 @@
+'use client';
+
+import { ArrowLeft, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AppLogo } from '@/components/app-logo';
+import { MenuIcon } from '@/components/menu-icon';
+import { useShell } from '@/app/(main)/shell-context';
+
+interface PageHeaderProps {
+  title: string;
+  showBack?: boolean;
+  onBack?: () => void;
+}
+
+export function PageHeader({ title, showBack = false, onBack }: PageHeaderProps) {
+  const { setSettingsOpen } = useShell();
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.09)]">
+      {showBack ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="h-10 w-10 rounded-lg"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+      ) : (
+        <AppLogo size="sm" />
+      )}
+
+      <h1 className="text-xs font-mono uppercase tracking-widest text-[#f5f0eb]">
+        {title}
+      </h1>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setSettingsOpen(true)}
+        className="h-10 w-10 rounded-lg bg-[rgba(255,255,255,0.07)] hover:bg-[rgba(255,255,255,0.10)]"
+      >
+        <MenuIcon className="w-5 h-5" />
+      </Button>
+    </div>
+  );
+}

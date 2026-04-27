@@ -1,0 +1,47 @@
+'use client';
+
+import { useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
+export function AuthGuard({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkAuthAndProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        // Ensure profile exists
+        const { data: profile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        if (fetchError || !profile) {
+          // Create profile if it doesn't exist
+          await supabase.from('profiles').insert({
+            id: user.id,
+            name: user.user_metadata?.name || 'Seller',
+            email: user.email,
+            avatar_url: user.user_metadata?.avatar_url,
+          });
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        router.push('/login');
+      }
+    };
+
+    checkAuthAndProfile();
+  }, [supabase, router]);
+
+  return <>{children}</>;
+}

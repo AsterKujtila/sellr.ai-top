@@ -1,0 +1,75 @@
+'use client';
+
+import { ReactNode, useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/dialog';
+
+export function DesktopShell({ children }: { children: ReactNode }) {
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkDesktop = () => {
+      const desktop = window.innerWidth > 640;
+      setIsDesktop(desktop);
+
+      if (desktop) {
+        const shown = localStorage.getItem('sellr-mobile-warning-shown');
+        if (!shown) {
+          setShowMobileWarning(true);
+          localStorage.setItem('sellr-mobile-warning-shown', 'true');
+        }
+      }
+    };
+
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
+  if (isDesktop) {
+    return (
+      <>
+        <div className="min-h-screen bg-gradient-to-br from-[#1a1210] to-[#2a1e18] flex items-center justify-center p-4">
+          {/* Phone frame */}
+          <div className="max-w-[430px] w-full aspect-[9/16] bg-black rounded-[32px] border-8 border-gray-900 shadow-2xl overflow-hidden flex flex-col">
+            {/* Phone notch */}
+            <div className="h-6 bg-black flex items-center justify-center">
+              <div className="w-32 h-5 bg-black rounded-b-2xl" />
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+              {children}
+            </div>
+
+            {/* Phone bottom button area */}
+            <div className="h-6 bg-black" />
+          </div>
+        </div>
+
+        {/* Warning Dialog */}
+        <AlertDialog open={showMobileWarning} onOpenChange={setShowMobileWarning}>
+          <AlertDialogContent className="bg-[#2a1e18] border-[rgba(255,255,255,0.09)]">
+            <AlertDialogTitle className="text-[#f5f0eb]">
+              Mobile-First Design
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#a89890]">
+              SELLR is optimized for mobile. This phone frame preview shows the optimal experience. Use your mobile device for the best experience, or resize your browser window.
+            </AlertDialogDescription>
+            <AlertDialogAction className="bg-[#c4724a] hover:bg-[#d4825a]">
+              Got it
+            </AlertDialogAction>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
+  return children;
+}

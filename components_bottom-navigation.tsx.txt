@@ -1,0 +1,48 @@
+'use client';
+
+import { MessageCircle, PenLine, Store, Zap } from 'lucide-react';
+import { useShell } from '@/app/(main)/shell-context';
+import type { Tab } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const tabs: { id: Tab; icon: typeof MessageCircle; label: string }[] = [
+  { id: 'chat', icon: MessageCircle, label: 'Chat' },
+  { id: 'offers', icon: PenLine, label: 'Offers' },
+  { id: 'store', icon: Store, label: 'Store' },
+  { id: 'credits', icon: Zap, label: 'Credits' },
+];
+
+export function BottomNavigation() {
+  const { activeTab, setActiveTab } = useShell();
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 px-4 pb-4 flex justify-center pointer-events-none">
+      <div className="glass-strong rounded-full px-4 py-3 flex gap-2 pointer-events-auto w-fit">
+        {tabs.map(({ id, icon: Icon, label }) => {
+          const isActive = activeTab === id;
+
+          return (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-full transition-all duration-300',
+                isActive
+                  ? 'bg-[#c4724a] text-white'
+                  : 'text-[#f5f0eb] opacity-45 hover:opacity-60'
+              )}
+            >
+              <Icon
+                className="w-4 h-4"
+                strokeWidth={isActive ? 2.25 : 1.75}
+              />
+              <span className="text-10px font-mono uppercase tracking-widest hidden sm:inline">
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

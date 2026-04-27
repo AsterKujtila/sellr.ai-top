@@ -1,0 +1,75 @@
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function getCurrentDateString(): string {
+  const now = new Date();
+  const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  const day = days[now.getDay()];
+  const date = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+
+  const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  return `${day} ${date} ${monthNames[now.getMonth()]}`;
+}
+
+export function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const day = days[date.getDay()];
+  const d = date.getDate();
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = monthNames[date.getMonth()];
+  return `${day}, ${d} ${month}`;
+}
+
+export function formatDateRange(startDate: string): string {
+  const start = new Date(startDate);
+  const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const startMonth = monthNames[start.getMonth()];
+  const endMonth = monthNames[end.getMonth()];
+
+  if (start.getMonth() === end.getMonth()) {
+    return `Week of ${startMonth} ${start.getDate()}`;
+  }
+
+  return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
+}
+
+export function parseMarkdown(markdown: string): string {
+  if (!markdown) return '';
+
+  const html = marked(markdown) as string;
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img', 'div', 'span'
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt'],
+  });
+}
+
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function getDayOfWeek(date: Date): string {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[date.getDay()];
+}
+
+export function getSessionDateString(date: Date): string {
+  return date.toISOString().split('T')[0];
+}

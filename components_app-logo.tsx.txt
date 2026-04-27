@@ -1,0 +1,30 @@
+'use client';
+
+import { cn } from '@/lib/utils';
+
+interface AppLogoProps {
+  size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+}
+
+export function AppLogo({ size = 'md', onClick }: AppLogoProps) {
+  const sizeMap = {
+    sm: { container: 'w-8 h-8', text: 'text-lg' },
+    md: { container: 'w-10 h-10', text: 'text-xl' },
+    lg: { container: 'w-16 h-16', text: 'text-4xl' },
+  };
+
+  const { container, text } = sizeMap[size];
+
+  return (
+    <div
+      className={cn(
+        'rounded-lg bg-[#c4724a] flex items-center justify-center cursor-pointer',
+        container
+      )}
+      onClick={onClick}
+    >
+      <span className={cn('font-serif font-bold text-white', text)}>S</span>
+    </div>
+  );
+}

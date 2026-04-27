@@ -1,0 +1,450 @@
+'use client';
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Send, RotateCcw, Mic, Volume2, Copy, Check, Sparkles, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
+import { getCurrentDateString, cn, getSpeechRecognition } from '@/lib/utils';
+import ThinkingDots from './thinking-dots';
+import Markdown from './markdown';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: number;
+}
+
+const QUICK_CHIPS = [
+  { icon: '💰', text: 'How to price my Whop offer?' },
+  { icon: '📈', text: 'Ways to increase conversions?' },
+  { icon: '🎯', text: 'Target audience strategies' },
+  { icon: '✍️', text: 'Write compelling copy' },
+  { icon: '🚀', text: 'Launch plan for my store' },
+  { icon: '📱', text: 'TikTok growth hacks' },
+  { icon: '💌', text: 'Email automation sequence' },
+  { icon: '🔥', text: 'Viral marketing tactics' },
+];
+
+export default function PremiumChatView() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [credits, setCredits] = useState(50);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    loadProfile();
+    createNewSession();
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = Math.min(
+          textareaRef.current.scrollHeight,
+          160
+        ) + 'px';
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        setProfile(prof);
+        if (prof) {
+          setCredits(prof.credits_limit - prof.credits_used);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+    }
+  };
+
+  const createNewSession = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: session } = await supabase
+          .from('chat_sessions')
+          .insert({
+            user_id: user.id,
+            session_date: new Date().toISOString().split('T')[0],
+            day_of_week: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+          })
+          .select()
+          .single();
+        if (session) {
+          setSessionId(session.id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to create session:', err);
+    }
+  };
+
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isLoading || !sessionId) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: userMessage,
+      timestamp: Date.now(),
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, newMessage].map((m) => ({ role: m.role, content: m.content })),
+          sessionId,
+        }),
+      });
+
+      if (response.status === 429) {
+        setError('Out of credits. Upgrade your plan to continue.');
+        setMessages((prev) => prev.slice(0, -1));
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const { text } = await response.json();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: text,
+          timestamp: Date.now(),
+        },
+      ]);
+
+      await loadProfile();
+    } catch (err) {
+      setError('Failed to send message. Please try again.');
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [input, messages, isLoading, sessionId]);
+
+  const handleVoiceInput = () => {
+    const SpeechRecognition = getSpeechRecognition();
+    if (!SpeechRecognition) return;
+
+    if (!recognitionRef.current) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onstart = () => setIsListening(true);
+      recognitionRef.current.onend = () => setIsListening(false);
+      recognitionRef.current.onerror = () => setIsListening(false);
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('');
+        setInput((prev) => prev + (prev ? ' ' : '') + transcript);
+      };
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
+  const handleCopy = async (content: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleTextToSpeech = (content: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(content);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleReset = () => {
+    setMessages([]);
+    setInput('');
+    createNewSession();
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gradient-dark overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary rounded-full blur-3xl animate-pulse-soft" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '1s' }} />
+      </div>
+
+      {/* Header */}
+      <div className="relative z-10 px-4 pt-4 pb-4 border-b border-border glass-panel m-4 rounded-xl flex items-center justify-between">
+        <div className="space-y-1">
+          <p className="text-sm-mono">Smart AI Coach</p>
+          <h1 className="font-serif text-lg font-bold text-gradient flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            {profile?.name || 'Welcome'}
+          </h1>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleReset}
+          className="btn-icon hover:bg-primary/10"
+          aria-label="Reset conversation"
+        >
+          <RotateCcw className="w-5 h-5" />
+        </motion.button>
+      </div>
+
+      {/* Messages Area */}
+      <div className="relative flex-1 overflow-y-auto touch-scroll no-scrollbar px-4 py-6 space-y-4 z-10">
+        {/* Empty State */}
+        {messages.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center h-full text-center space-y-8 py-12"
+          >
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="text-6xl"
+            >
+              ✨
+            </motion.div>
+            <div className="space-y-2 max-w-xs">
+              <h2 className="font-serif text-2xl font-bold text-foreground">What's on your mind?</h2>
+              <p className="text-muted-foreground">Ask me anything about your Whop store, sales strategies, or growth tactics.</p>
+            </div>
+
+            {/* Quick Chips */}
+            <div className="w-full space-y-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Quick questions</p>
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_CHIPS.map((chip) => (
+                  <motion.button
+                    key={chip.text}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setInput(chip.text)}
+                    className="card-interactive text-left"
+                  >
+                    <div className="text-2xl mb-2">{chip.icon}</div>
+                    <p className="text-xs font-medium text-foreground">{chip.text}</p>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Messages */}
+        <AnimatePresence>
+          {messages.map((msg, index) => (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className={cn('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}
+            >
+              <div
+                className={cn(
+                  'max-w-xs rounded-2xl overflow-hidden',
+                  msg.role === 'user'
+                    ? 'bg-gradient-to-br from-primary to-primary-dark text-white rounded-br-none'
+                    : 'glass-panel rounded-bl-none'
+                )}
+              >
+                <div className="px-4 py-3 prose-premium text-sm leading-relaxed">
+                  <Markdown content={msg.content} />
+                </div>
+
+                {/* Action Buttons for AI Messages */}
+                {msg.role === 'assistant' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="px-4 py-2 border-t border-border/50 flex gap-2 bg-surface/30"
+                  >
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleCopy(msg.content, msg.id)}
+                      className="btn-icon w-8 h-8 text-xs"
+                      aria-label="Copy message"
+                    >
+                      {copiedId === msg.id ? (
+                        <Check className="w-4 h-4 text-success" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleTextToSpeech(msg.content)}
+                      className="btn-icon w-8 h-8 text-xs"
+                      aria-label="Read aloud"
+                    >
+                      <Volume2 className="w-4 h-4 text-muted-foreground" />
+                    </motion.button>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {/* Loading State */}
+        {isLoading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+            <ThinkingDots />
+          </motion.div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel rounded-xl p-4 border-l-4 border-destructive"
+          >
+            <p className="text-sm text-destructive font-medium">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="text-xs text-muted-foreground hover:text-foreground mt-2 underline"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="relative z-10 px-4 py-4 space-y-3 flex-shrink-0 safe-area-bottom border-t border-border">
+        {/* Credits Info */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-warning" />
+            <span className="text-muted-foreground">{credits} credits remaining</span>
+          </div>
+          {credits < 10 && (
+            <span className="text-destructive font-semibold">Low on credits</span>
+          )}
+        </div>
+
+        {/* Input Box */}
+        <div className="glass-panel-strong rounded-2xl p-3 flex gap-2 items-end">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Ask me anything..."
+            rows={1}
+            className="flex-1 bg-transparent text-foreground placeholder-muted-foreground resize-none outline-none text-sm font-medium"
+          />
+
+          <div className="flex gap-2">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleVoiceInput}
+              disabled={isLoading}
+              className={cn(
+                'btn-icon',
+                isListening ? 'bg-destructive/20 text-destructive' : ''
+              )}
+              aria-label="Voice input"
+            >
+              <Mic className="w-5 h-5" />
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className="btn-primary rounded-lg p-3"
+              aria-label="Send message"
+            >
+              <Send className="w-5 h-5" />
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Helper Text */}
+        <p className="text-10px text-muted-foreground text-center uppercase tracking-wider">
+          ↩ to send • ⇧↩ for new line
+        </p>
+      </div>
+    </div>
+  );
+}

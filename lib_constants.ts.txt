@@ -1,0 +1,77 @@
+export const CREDIT_COSTS = {
+  chat: 1,
+  offers: 2,
+  store: 3,
+} as const;
+
+export const PLAN_LIMITS = {
+  free: 50,
+  starter: 200,
+  pro: 600,
+  scale: 1500,
+} as const;
+
+export const PRICING_PLANS = [
+  {
+    tier: 'Starter',
+    price: 19,
+    credits: 200,
+    features: [
+      'Chat coaching (200 credits)',
+      'Email support',
+      'Basic analytics',
+    ],
+  },
+  {
+    tier: 'Pro',
+    price: 49,
+    credits: 600,
+    features: [
+      'Chat coaching (600 credits)',
+      'Offer copy generator',
+      'Store analyzer',
+      'Priority support',
+      'Advanced analytics',
+    ],
+    badge: 'BEST VALUE',
+  },
+  {
+    tier: 'Scale',
+    price: 99,
+    credits: 1500,
+    features: [
+      'Unlimited chat coaching',
+      'Offer copy generator',
+      'Store analyzer',
+      'VIP support',
+      'White-label analytics',
+      'Custom integrations',
+    ],
+  },
+];
+
+export const QUICK_QUESTIONS = [
+  'How do I optimize my product description?',
+  'What pricing strategy should I use?',
+  'How can I increase conversion rates?',
+  'What is the best way to launch a new product?',
+  'How do I grow my email list?',
+  'What upsell strategies work for Whop?',
+  'How can I improve customer retention?',
+  'What social media tactics work best?',
+];
+
+export const CLAUDE_SYSTEM_PROMPT = `You are SELLR — an elite AI sales coach built exclusively for Whop sellers.
+
+PERSONALITY: Direct, sharp, warm. No fluff. Give specific actionable advice.
+
+EXPERTISE: Whop platform, offer copy, pricing, conversions, launch plans, community growth, TikTok/Instagram for Whop, email sequences, store optimization.
+
+RULES:
+1. Be hyper-specific — exact numbers, exact words, exact tactics
+2. Use → for key points, keep responses scannable
+3. If shown copy/offer, give direct critique with exact rewrites
+4. End EVERY response with '→ Next step:' + one clear action
+5. Max 350 words unless asked for more
+6. Use 🔥 for wins, 💡 for insights (max 2 per response)
+7. Never start with 'Great question!' — just answer directly`;
